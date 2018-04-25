@@ -37,33 +37,39 @@ func getQuiz(problemFileName string) []Quiz {
 	return quiz
 }
 
-func startQuiz(quiz []Quiz, totalQuestions int, answerQueue chan int) {
-	correct := 0
-	ansReader := bufio.NewReader(os.Stdin)
+func startQuiz(quiz []Quiz, totalQuestions int, questionQueue chan Quiz) {
 	for i := 0; i < totalQuestions; i++ {
-		fmt.Println(quiz[i].Question)
-		ans, _ := ansReader.ReadString('\n')
-		if strings.TrimRight(ans, "\n") == quiz[i].Answer {
-			correct += 1
-		}
+		questionQueue <- quiz[i]
 	}
-	answerQueue <- correct
 }
 
 func main() {
 	fmt.Println("Welcome to quiz")
 	quiz := getQuiz("problems.csv")
+	correct := 0
+	attempted := 0
+	ansReader := bufio.NewReader(os.Stdin)
 	totalQuestions := len(quiz)
-	answerQueue := make(chan int)
+	questionQueue := make(chan Quiz)
 	timer1 := time.NewTimer(quizTimeLimit * time.Second)
-	go startQuiz(quiz, totalQuestions, answerQueue)
+	go startQuiz(quiz, totalQuestions, questionQueue)
 loop:
 	for {
 		select {
-		case correct := <-answerQueue:
-			fmt.Printf("%d correct out of %d \n", correct, totalQuestions)
-			break loop
+		case q := <-questionQueue:
+			fmt.Println(q.Question)
+			ans, _ := ansReader.ReadString('\n')
+			if strings.TrimRight(ans, "\n") == q.Answer {
+				correct += 1
+			}
+			attempted += 1
+			if attempted == totalQuestions {
+				fmt.Printf("%d correct out of %d \n", correct, totalQuestions)
+				break loop
+			}
 		case <-timer1.C:
+			fmt.Println("Time ended")
+			fmt.Printf("%d correct out of %d \n", correct, totalQuestions)
 			break loop
 		}
 	}
