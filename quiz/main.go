@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -15,8 +16,6 @@ type Quiz struct {
 	Question string
 	Answer   string
 }
-
-const quizTimeLimit = 6
 
 func getQuiz(problemFileName string) []Quiz {
 	var quiz []Quiz
@@ -44,14 +43,20 @@ func startQuiz(quiz []Quiz, totalQuestions int, questionQueue chan Quiz) {
 }
 
 func main() {
+
+	fileName := flag.String("fn", "problems.csv", "a string")
+	quizTimeLimit := flag.Int("tl", 60, "in seconds")
+	flag.Parse()
+	fmt.Println(*fileName)
 	fmt.Println("Welcome to quiz")
-	quiz := getQuiz("problems.csv")
+
+	quiz := getQuiz(*fileName)
 	correct := 0
 	attempted := 0
 	ansReader := bufio.NewReader(os.Stdin)
 	totalQuestions := len(quiz)
 	questionQueue := make(chan Quiz)
-	timer1 := time.NewTimer(quizTimeLimit * time.Second)
+	timer1 := time.NewTimer(time.Duration(*quizTimeLimit) * time.Second)
 	go startQuiz(quiz, totalQuestions, questionQueue)
 loop:
 	for {
